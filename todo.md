@@ -5,3 +5,5 @@
 - Some mechanism for handling runtime errors along the lines of exception handling.
 
 - No break or continue for loops.
+
+- Pretty Error messages with instructions.
