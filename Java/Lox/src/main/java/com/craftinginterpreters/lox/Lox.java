@@ -9,10 +9,19 @@ import java.nio.file.Paths;
 import java.util.List;
 
 public class Lox {
-    // This boolean is used to confirm if error occured while running the program
+    // This boolean is used to confirm if error occurred while running the program
     static boolean hadError = false;
     
     public static void main(String[] args) throws IOException {
+        Expr expression = new Expr.Binary(
+                new Expr.Unary(new Token(TokenType.MINUS, "-", null, 1), new Expr.Literal(123)),
+                new Token(TokenType.STAR, "*", null,1),
+                new Expr.Grouping(new Expr.Literal(45.67))
+        );
+
+        System.out.println(new AstPrinter().print(expression));
+        System.out.println(new ReversePolishNotationPrinter().print(expression));
+
         if (args.length > 1){
             System.out.println("Usage: jlox [script]");
             System.exit(64);
@@ -22,7 +31,7 @@ public class Lox {
             runPrompt();
         }
     }
-    
+
     private static void runFile(String path) throws IOException {
         byte[] bytes = Files.readAllBytes(Paths.get(path));
         run(new String(bytes, Charset.defaultCharset()));
@@ -55,9 +64,9 @@ public class Lox {
         // Printing the tokens from the scanner
         for(Token token: tokens){
             System.out.println(token);
-        }   
+        }
     }
-    
+
     // Function to call when error occurs
     static void error(int line, String message){
         report(line, "", message);
