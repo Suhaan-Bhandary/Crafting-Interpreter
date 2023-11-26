@@ -11,21 +11,12 @@ import java.util.List;
 public class Lox {
     // This boolean is used to confirm if error occurred while running the program
     static boolean hadError = false;
-    
+
     public static void main(String[] args) throws IOException {
-        Expr expression = new Expr.Binary(
-                new Expr.Unary(new Token(TokenType.MINUS, "-", null, 1), new Expr.Literal(123)),
-                new Token(TokenType.STAR, "*", null,1),
-                new Expr.Grouping(new Expr.Literal(45.67))
-        );
-
-        System.out.println(new AstPrinter().print(expression));
-        System.out.println(new ReversePolishNotationPrinter().print(expression));
-
-        if (args.length > 1){
+        if (args.length > 1) {
             System.out.println("Usage: jlox [script]");
             System.exit(64);
-        } else if(args.length == 1) {
+        } else if (args.length == 1) {
             runFile(args[0]);
         } else {
             runPrompt();
@@ -35,46 +26,58 @@ public class Lox {
     private static void runFile(String path) throws IOException {
         byte[] bytes = Files.readAllBytes(Paths.get(path));
         run(new String(bytes, Charset.defaultCharset()));
-    
+
         // Indicate an error in the exit code
         if (hadError) System.exit(65);
     }
-    
+
     private static void runPrompt() throws IOException {
         InputStreamReader input = new InputStreamReader(System.in);
         BufferedReader reader = new BufferedReader(input);
-        
-        for(;;){
+
+        for (; ; ) {
             System.out.print("> ");
             String line = reader.readLine();
-            
-            if(line == null) break;
+
+            if (line == null) break;
             run(line);
-            
+
             // we reset the error in this mode for each line
             hadError = false;
         }
     }
-    
-    private static void run(String source){
+
+    private static void run(String source) {
         // Sending the file to scanner and then reading tokens
         Scanner scanner = new Scanner(source);
         List<Token> tokens = scanner.scanTokens();
-        
-        // Printing the tokens from the scanner
-        for(Token token: tokens){
-            System.out.println(token);
-        }
+
+        // Create a AST for Expression
+        Parser p = new Parser(tokens);
+        Expr expr = p.parse();
+
+        // Stop if there was a syntax error.
+        if(hadError) return;
+
+        System.out.println(new AstPrinter().print(expr));
     }
 
     // Function to call when error occurs
-    static void error(int line, String message){
+    static void error(int line, String message) {
         report(line, "", message);
     }
-    
-    private static void report(int line, String where, String message){
-        System.err.println("[Line " + line + "] Error" + where+ ": " + message);
-        
+
+    static void error(Token token, String message) {
+        if (token.type == TokenType.EOF) {
+            report(token.line, " at end", message);
+        } else {
+            report(token.line, " at '" + token.lexeme + "'", message);
+        }
+    }
+
+    private static void report(int line, String where, String message) {
+        System.err.println("[Line " + line + "] Error" + where + ": " + message);
+
         hadError = true;
     }
 }
