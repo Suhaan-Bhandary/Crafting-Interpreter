@@ -1,30 +1,109 @@
 package com.craftinginterpreters.lox;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 class Parser {
-    private static class ParseError extends RuntimeException {}
+    private static final Set<String> invalidIdentifiers = new HashSet<>();
 
     private final List<Token> tokens;
     private int current = 0;
-
     Parser(List<Token> tokens) {
         this.tokens = tokens;
     }
 
-    Expr parse() {
+    List<Stmt> parse() {
+        List<Stmt> statements = new ArrayList<>();
+
+        while (!isAtEnd()) {
+            statements.add(declaration());
+        }
+
+        return statements;
+    }
+
+    private Expr expression() {
+        return assignment();
+    }
+
+    private Expr assignment(){
+        Expr expr = equality();
+
+        if(match(TokenType.EQUAL)){
+            Token equals = previous();
+            Expr value = assignment();
+
+            if(expr instanceof Expr.Variable){
+                Token name = ((Expr.Variable)expr).name;
+                return new Expr.Assign(name, value);
+            }
+
+            error(equals, "Invalid assignment target.");
+        }
+
+        return expr;
+    }
+
+    private Stmt declaration() {
         try {
-            return expression();
+            if (match(TokenType.VAR)) return varDeclaration();
+            return statement();
         } catch (ParseError error) {
+            invalidIdentifiers.clear();
+            synchronize();
             return null;
         }
     }
 
-    private Expr expression() {
-        return evaluate();
+    private Stmt varDeclaration(){
+        Token name = consume(TokenType.IDENTIFIER, "Expect variable name");
+
+        // Create a set of invalid names
+        invalidIdentifiers.add(name.lexeme);
+
+        Expr initializer = null;
+        if(match(TokenType.EQUAL)){
+            initializer = expression();
+        }
+
+        invalidIdentifiers.clear();
+
+        consume(TokenType.SEMICOLON, "Expect ';' after variable declaration.");
+        return new Stmt.Var(name, initializer);
     }
 
-    private Expr evaluate() {
+    private Stmt statement() {
+        if (match(TokenType.PRINT)) return printStatement();
+        if (match(TokenType.LEFT_BRACE)) return new Stmt.Block(block());
+        return expressionStatement();
+    }
+
+    private List<Stmt> block(){
+        List<Stmt> statements = new ArrayList<>();
+
+        while (!check(TokenType.RIGHT_BRACE) && !isAtEnd()) {
+            statements.add(declaration());
+        }
+
+        consume(TokenType.RIGHT_BRACE, "Expect '}' after block.");
+        return statements;
+    }
+
+    private Stmt printStatement() {
+        Expr value = expression();
+        consume(TokenType.SEMICOLON, "Expect ';' after value.");
+        return new Stmt.Print(value);
+    }
+
+    private Stmt expressionStatement() {
+        Expr expr = expression();
+        consume(TokenType.SEMICOLON, "Expect ';' after value.");
+        return new Stmt.Expression(expr);
+    }
+
+    private Expr equality() {
         Expr expr = comparison();
 
         // Notice that if not matching token is found then we know that it is not an evaluation
@@ -93,6 +172,13 @@ class Parser {
             return new Expr.Literal(previous().literal);
         }
 
+        if(match(TokenType.IDENTIFIER)){
+            if(invalidIdentifiers.contains(previous().lexeme)){
+                throw error(previous(), "Variable is shadowed");
+            }
+            return new Expr.Variable(previous());
+        }
+
         if (match(TokenType.LEFT_PAREN)) {
             Expr expr = expression();
             // consume the token if it is correct else we handle the error
@@ -118,7 +204,6 @@ class Parser {
         if (check(type)) return advance();
         throw error(peek(), message);
     }
-
 
     private boolean check(TokenType type) {
         if (isAtEnd()) return false;
@@ -150,11 +235,11 @@ class Parser {
     private void synchronize() {
         advanceWithNoReturn();
 
-        while(!isAtEnd()){
-            if(previous().type == TokenType.SEMICOLON) return;
+        while (!isAtEnd()) {
+            if (previous().type == TokenType.SEMICOLON) return;
 
             // If discard everything until we find a statement boundary
-            switch (peek().type){
+            switch (peek().type) {
                 case CLASS:
                 case FUN:
                 case VAR:
@@ -172,5 +257,8 @@ class Parser {
 
     private boolean isAtEnd() {
         return peek().type == TokenType.EOF;
+    }
+
+    private static class ParseError extends RuntimeException {
     }
 }

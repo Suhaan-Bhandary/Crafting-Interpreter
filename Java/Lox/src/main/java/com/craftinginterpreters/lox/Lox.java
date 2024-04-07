@@ -61,12 +61,12 @@ public class Lox {
 
         // Create a AST for Expression
         Parser p = new Parser(tokens);
-        Expr expr = p.parse();
+        List<Stmt> statements = p.parse();
 
         // Stop if there was a syntax error.
         if(hadError) return;
 
-        interpreter.interpret(expr);
+        interpreter.interpret(statements);
     }
 
     // Function to call when error occurs

@@ -72,13 +72,21 @@ def main(argv):
         return
 
     types = [
+        "Assign   : Token name, Expr value",
         "Binary    : Expr left, Token operator, Expr right",
         "Grouping  : Expr expression",
         "Literal   : Object value",
         "Unary     : Token operator, Expr right",
+        "Variable  : Token name",
     ]
 
     defineAst(output_dir, "Expr", types);
+    defineAst(output_dir, "Stmt", [
+      "Block : List<Stmt> statements",
+      "Expression : Expr expression",
+      "Print      : Expr expression",
+      "Var        : Token name, Expr initializer"
+    ]);
 
 if __name__ == "__main__":
     main(sys.argv)

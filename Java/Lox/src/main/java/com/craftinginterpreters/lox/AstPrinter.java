@@ -1,8 +1,13 @@
 package com.craftinginterpreters.lox;
 
 class AstPrinter implements Expr.Visitor<String> {
-    String print(Expr expr){
+    String print(Expr expr) {
         return expr.accept(this);
+    }
+
+    @Override
+    public String visitAssignExpr(Expr.Assign expr) {
+        return expr.name.lexeme + " = " + expr.accept(this);
     }
 
     @Override
@@ -17,7 +22,7 @@ class AstPrinter implements Expr.Visitor<String> {
 
     @Override
     public String visitLiteralExpr(Expr.Literal expr) {
-        if(expr.value == null) return "nil";
+        if (expr.value == null) return "nil";
         return expr.value.toString();
     }
 
@@ -26,10 +31,15 @@ class AstPrinter implements Expr.Visitor<String> {
         return parenthesize(expr.operator.lexeme, expr.right);
     }
 
-    private String parenthesize(String name, Expr...expressions){
+    @Override
+    public String visitVariableExpr(Expr.Variable expr) {
+        return expr.name.lexeme;
+    }
+
+    private String parenthesize(String name, Expr... expressions) {
         StringBuilder builder = new StringBuilder();
         builder.append("(").append(name);
-        for (Expr exp: expressions) {
+        for (Expr exp : expressions) {
             builder.append(" ").append(exp.accept(this));
         }
         builder.append(")");
@@ -37,9 +47,14 @@ class AstPrinter implements Expr.Visitor<String> {
     }
 }
 
-class ReversePolishNotationPrinter implements Expr.Visitor<String>{
-    String print(Expr expression){
+class ReversePolishNotationPrinter implements Expr.Visitor<String> {
+    String print(Expr expression) {
         return expression.accept(this);
+    }
+
+    @Override
+    public String visitAssignExpr(Expr.Assign expr) {
+        return expr.name.lexeme + " = " + expr.accept(this);
     }
 
     @Override
@@ -54,7 +69,7 @@ class ReversePolishNotationPrinter implements Expr.Visitor<String>{
 
     @Override
     public String visitLiteralExpr(Expr.Literal expr) {
-        if(expr.value == null) return "nil" + " ";
+        if (expr.value == null) return "nil" + " ";
         return expr.value.toString() + " ";
     }
 
@@ -66,5 +81,10 @@ class ReversePolishNotationPrinter implements Expr.Visitor<String>{
         }
 
         return expr.right.accept(this) + operator + " ";
+    }
+
+    @Override
+    public String visitVariableExpr(Expr.Variable expr) {
+        return expr.name.lexeme;
     }
 }
